@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useWebSocket } from './useWebSocket';
 import './index.css';
 
@@ -10,19 +10,13 @@ function App() {
   const [cards, setCards] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  const { socket, messages, sendMessage, clearMessages } = useWebSocket(WS_URL);
-
-  // Process incoming messages
-  useEffect(() => {
-    if (messages.length === 0) return;
-    
-    const latestMessage = messages[messages.length - 1];
-    
-    switch (latestMessage.type) {
+  // Directly handle incoming messages synchronously to avoid missing messages due to React state batching
+  const handleMessage = useCallback((message) => {
+    switch (message.type) {
       case 'CARD_START':
         setCards(prev => {
           const newCards = [...prev];
-          newCards[latestMessage.index] = { state: 'loading' };
+          newCards[message.index] = { state: 'loading' };
           return newCards;
         });
         break;
@@ -30,7 +24,7 @@ function App() {
       case 'CARD_SUCCESS':
         setCards(prev => {
           const newCards = [...prev];
-          newCards[latestMessage.index] = { state: 'success', data: latestMessage.card };
+          newCards[message.index] = { state: 'success', data: message.card };
           return newCards;
         });
         break;
@@ -38,7 +32,7 @@ function App() {
       case 'CARD_ERROR':
         setCards(prev => {
           const newCards = [...prev];
-          newCards[latestMessage.index] = { state: 'error', error: latestMessage.message };
+          newCards[message.index] = { state: 'error', error: message.message };
           return newCards;
         });
         break;
@@ -50,19 +44,17 @@ function App() {
       default:
         break;
     }
-  }, [messages]);
+  }, []);
+
+  const { socket, sendMessage } = useWebSocket(WS_URL, handleMessage);
 
   const handleGenerate = (e) => {
     e.preventDefault();
     if (!topic.trim()) return;
     
     // Reset state
-    clearMessages();
-    setCards([]);
-    setIsGenerating(true);
-    
-    // Initialize 3 pending cards
     setCards([{ state: 'pending' }, { state: 'pending' }, { state: 'pending' }]);
+    setIsGenerating(true);
     
     sendMessage({
       action: 'generate',

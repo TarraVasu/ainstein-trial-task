@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function useWebSocket(url) {
+export function useWebSocket(url, onMessage) {
   const [socket, setSocket] = useState(null);
-  const [messages, setMessages] = useState([]);
   const wsRef = useRef(null);
+  const onMessageRef = useRef(onMessage);
+
+  // Keep the latest callback ref without triggering re-connects
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
     const ws = new WebSocket(url);
@@ -16,7 +21,9 @@ export function useWebSocket(url) {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setMessages(prev => [...prev, data]);
+        if (onMessageRef.current) {
+          onMessageRef.current(data);
+        }
       } catch (e) {
         console.error("Failed to parse message", event.data);
       }
@@ -42,9 +49,5 @@ export function useWebSocket(url) {
     }
   }, []);
 
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, []);
-
-  return { socket, messages, sendMessage, clearMessages };
+  return { socket, sendMessage };
 }
