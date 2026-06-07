@@ -18,33 +18,14 @@ const wss = new WebSocketServer({ server });
 const ai = new GoogleGenAI({});
 
 async function generateCard(topic, index) {
-  const prompt = `
-Generate a learning card about the topic "${topic}".
-This is card number ${index + 1} in a series.
-Return ONLY a valid JSON object with the following structure:
-{
-  "title": "A catchy title for this specific subtopic",
-  "concept": "2-3 sentences explaining a key concept",
-  "funFact": "A short, interesting fun fact related to this card"
-}
-Do not include markdown blocks or any other text. Return raw JSON.
-`;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      temperature: 0.7,
-    }
-  });
-
-  try {
-    return JSON.parse(response.text);
-  } catch (e) {
-    console.error("Failed to parse AI response:", response.text);
-    throw new Error("AI returned invalid format");
-  }
+  // MOCK API TO BYPASS GOOGLE DAILY QUOTA LIMITS
+  await delay(1200); // Simulate AI generation time
+  
+  return {
+    title: `${topic} - Concept ${index + 1}`,
+    concept: `This is the generated explanation for ${topic}. It progressively explains the core principles of the subject in an easy to digest format, mimicking a real AI stream.`,
+    funFact: `Did you know? This is randomly generated fact #${Math.floor(Math.random() * 1000)} about ${topic}!`
+  };
 }
 
 // Helper to simulate delay
